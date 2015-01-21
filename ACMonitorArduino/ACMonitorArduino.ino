@@ -19,10 +19,6 @@ byte mac[] = { 0xA8, 0x16, 0xB2, 0xFA, 0xAF, 0xD5 };
 //IPAddress server(10,200,253,83);
 //byte server[] = {10,200,253,83};
 
-//Juguemos.cl
-//IPAddress server(107,170,182,27);
-//byte server[] = {107,170,182,27};
-
 //Static IP for Arduino
 IPAddress ip(10,200,114,81);
 //byte ip[] = {10,200,114,81};
@@ -41,14 +37,22 @@ int coData = 0                //Analog Data
 //MQ-7 functions with 1.4V and 5V, when it's functioning with
 //5V can't make lectures because the sensor is heating, the library
 //and the broker manage, we save the last lecture
-void getCO(){
-
+int getCO(){
   if(MQ7.currentState() == LOW){
-    CoData = analogRead(coSensorOutput);
+    coData = analogRead(coSensorOutput);
     return coData;
   }
   else{
     return coData;
+  }
+}
+
+void firstReadCO(){
+  if(MQ7.currentState() == LOW){
+    coData = analogRead(coSensorOutput);
+  }
+  else{
+    coData = 0;
   }
 }
 
@@ -82,6 +86,7 @@ void setup() {
   server.begin();
   Serial.println("- OK");
   delay(2000);
+  firstReadCO();
 }
 
 void loop()
@@ -122,8 +127,7 @@ void loop()
             client.print(hum);
             client.println("</h1><br/>");
             client.print("<h1>CO_2 ");
-            getCO();
-            client.print(sensorValue);
+            client.print(getCO());
             client.println("</h1><br/>");
           }
           client.println("</html>");
