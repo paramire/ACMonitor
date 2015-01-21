@@ -1,14 +1,9 @@
 #include <SPI.h>
 #include <Ethernet.h>
-#include <CS_MQ7.h>
-#include "DHT.h"
 
-//CONSTRAITS
-#define DHTPIN 2        // PIN 2
-#define DHTTYPE DHT11   // DHT 11 
-#define MQ7PIN 7        // PIN 7
-
-//MAC
+// Enter a MAC address for your controller below.
+// Newer Ethernet shields have a MAC address printed on a sticker on the shield
+// Older Shield make your own
 byte mac[] = { 0xA8, 0x16, 0xB2, 0xFA, 0xAF, 0xD5 };
 
 //Google
@@ -19,56 +14,27 @@ byte mac[] = { 0xA8, 0x16, 0xB2, 0xFA, 0xAF, 0xD5 };
 //IPAddress server(10,200,253,83);
 //byte server[] = {10,200,253,83};
 
+//Juguemos.cl
+IPAddress server(107,170,182,27);
+//byte server[] = {107,170,182,27};
+
 //Static IP for Arduino
-IPAddress ip(10,200,114,81);
-//byte ip[] = {10,200,114,81};
+//IPAddress ip(10,200,253,100);
+//byte ip[] = {10,200,253,100};
 
 // Initialize the Ethernet client library
 // with the IP address and port of the server 
 // that you want to connect to (port 80 is default for HTTP):
 EthernetServer server(80);
 
-//Variables
-DHT dht(DHTPIN, DHTTYPE);     //Object DHT11
-CS_MQ7 MQ7(MQ7PIN);           //Object MQ7
-int coSensorOutput = 1;        //Analog Output
-int coData = 0;                //Analog Data 
-
-//MQ-7 functions with 1.4V and 5V, when it's functioning with
-//5V can't make lectures because the sensor is heating, the library
-//and the broker manage, we save the last lecture
-int getCO(){
-  if(MQ7.currentState() == LOW){
-    coData = analogRead(coSensorOutput);
-    return coData;
-  }
-  else{
-    return coData;
-  }
-}
-
-void firstReadCO(){
-  if(MQ7.currentState() == LOW){
-    coData = analogRead(coSensorOutput);
-  }
-  else{
-    coData = 0;
-  }
-}
-
-
 void setup() {
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
-  Serial.print("Initializing DHT11...");
-  dht.begin();
-  Serial.println("- OK");
+  Serial.println("Initializing...");
   delay(1000);
   // start the Ethernet connection:
-  Serial.print("Connecting...");
   if(Ethernet.begin(mac)==1){
-    Serial.println(" - OK");
-    Serial.print("IP: ");
+    Serial.print("OK - ");
     //Print DHCP - IP
     ip = Ethernet.localIP();
     for (byte thisByte = 0; thisByte < 4; thisByte++) {
@@ -76,22 +42,18 @@ void setup() {
       Serial.print(ip[thisByte], DEC);
       Serial.print(".");
     }
-    Serial.println(" - OK");
   }
   else{
-    Serial.println(" - ERROR"); 
+    Serial.println("ERROR"); 
   }
-  //Start Server
-  Serial.print("Initializing Server...");
+  Serial.println();
   server.begin();
-  Serial.println("- OK");
+  // give the Ethernet shield a second to initialize:
   delay(2000);
-  firstReadCO();
 }
 
 void loop()
 {
-  MQ7.CoPwrCycler(); 
   EthernetClient client = server.available();
   if (client) {
     Serial.println("new client");
@@ -109,32 +71,18 @@ void loop()
           client.println("HTTP/1.1 200 OK");
           client.println("Content-Type: text/html");
           client.println("Connection: close");  // the connection will be closed after completion of the response
-          client.println("Refresh: 10");  // refresh the page automatically every 5 sec
+          client.println("Refresh: 5");  // refresh the page automatically every 5 sec
           client.println();
           client.println("<!DOCTYPE HTML>");
           client.println("<html>");
-          
-          float hum = dht.readHumidity();
-          float tem = dht.readTemperature();
-
-          if(isnan(hum) || isnan(tem)){
-            client.print("<h1>Failed to read Temperature/Humidity</h1>");
-          }
-          else{
-            client.print("<h1>Temperature ");
-            client.print(tem);
-            client.print("</h1><br />");
-            client.print("<h1>Humidity ");
-            client.print(hum);
-            client.println("</h1><br/>");
-            if(MQ7.currentState()==LOW){
-              client.print("<h1 style='color: #00ff00;'>CO_2 ");
-            }
-            else{
-              client.print("<h1 style='color: #0000ff;'>CO_2 ");
-            }
-            client.print(getCO());
-            client.println("</h1><br/>");
+          // output the value of each analog input pin
+          for (int analogChannel = 0; analogChannel < 6; analogChannel++) {
+            int sensorReading = analogRead(analogChannel);
+            client.print("analog input ");
+            client.print(analogChannel);
+            client.print(" is ");
+            client.print(sensorReading);
+            client.println("<br />");
           }
           client.println("</html>");
           break;
