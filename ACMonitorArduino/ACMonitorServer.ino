@@ -37,6 +37,7 @@ int coData = 0;                //Analog Data
 //MQ-7 functions with 1.4V and 5V, when it's functioning with
 //5V can't make lectures because the sensor is heating, the library
 //and the broker manage, we save the last lecture
+
 int getCO(){
   if(MQ7.currentState() == LOW){
     coData = analogRead(coSensorOutput);
@@ -55,7 +56,6 @@ void firstReadCO(){
     coData = 0;
   }
 }
-
 
 void setup() {
   // Open serial communications and wait for port to open:
