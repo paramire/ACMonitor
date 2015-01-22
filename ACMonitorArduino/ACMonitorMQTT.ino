@@ -103,31 +103,39 @@ void setup()
   delay(2000);
   firstReadCO();
         
-        if(client.connect("arduinoClient")) {
-          Serial.println("YAY");
-        }
+  if(client.connect("arduinoClient","monitor/status",0,0,"Client Disconnected")) {
+    Serial.println("YAY");
+  }
 }
 
 void loop(){
     MQ7.CoPwrCycler();
     delay(5000);
-    client.loop();
-    float hum = dht.readHumidity();
-    float tem = dht.readTemperature();
-    charear(hum,humC);
-    charear(tem,temC);
-    charear(getCO(),coC);
-    client.publish("monitor/humid",humC);
-    client.publish("monitor/temp",temC);
-    
-    client.publish("monitor/CO",coC);
-    if(MQ7.currentState()==LOW){
-      Serial.println("LOW");
+    if(client.connected()){
+      client.loop();
+      float hum = dht.readHumidity();
+      float tem = dht.readTemperature();
+      charear(hum,humC);
+      charear(tem,temC);
+      charear(getCO(),coC);
+      client.publish("monitor/humid",humC);
+      client.publish("monitor/temp",temC);
+      //add retained flag to CO
+      //client.publish("monitor/CO",coC);
+      if(MQ7.currentState()==LOW){
+        Serial.println("LOW");
+        client.publish("monitor/CO",coC);
+      }
+      else{
+        Serial.println("HIGH");
+        client.publish("monitor/CO",(uint8_t*) coC,strlen(coC),true);
+      }
+      client.subscribe("inTopic");
     }
     else{
-      Serial.println("HIGH");
-    }
-    client.subscribe("inTopic");  
-    
+      if(client.connect("arduinoClient","monitor/status",0,0,"Client Disconnected")) {
+         Serial.println("YAY - RECONNECT");
+       }
+    }  
 }
 
