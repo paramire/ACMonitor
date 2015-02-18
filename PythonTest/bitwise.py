@@ -1,2 +1,0 @@
-print bin((0 | 0xdb )<< 8)  
-print 0xFF
