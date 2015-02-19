@@ -47,45 +47,81 @@ class acmDB(object):
 	        }
 
 	def __init__(self, nameDB, fileCSV ):
-		self.ENDPOINT = 0x00
-		self.TIME = 0x0F
+		self.ENDPOINT   = 0x00
+		self.TIME       = 0x0F
 		self.KEEP_ALIVE = 0x21 
-		self.ALARM = 0x55
-		self.ALARM_ON = 0x56
-		self.FINISH = 0xAA
-		self.ERROR = 0xFF
-		self.OTHER = 0x01
+		self.ALARM      = 0x55
+		self.ALARM_ON   = 0x56
+		self.FINISH     = 0xAA
+		self.ERROR      = 0xFF
+		self.OTHER      = 0x01
 		self.nameDB = nameDB
 		self.fileCSV = fileCSV
-		#self.cursor_ACM = self.conn.cursor()
+
 		if not(os.path.isfile(nameDB)):
-			conn = sqlite3.connect(self.nameDB,timeout=30)
-			self.prepare(conn)
-			self.csv_bulk()
-			conn.close()
-		else:
-			conn = sqlite3.connect(self.nameDB,timeout=30)
+			conn = sqlite3.connect(self.nameDB,timeout=10)
+			self._prepare(conn)
+			self._csv_bulk()
 			conn.close()
 
-	def prepare(self,conn):
+	def _prepare(self,conn):
 		cursor_ACM = conn.cursor()
 		cursor_ACM.execute('''CREATE TABLE IF NOT EXISTS endpoint(id INTEGER PRIMARY KEY, code TEXT, type TEXT, dest_high TEXT, dest_low TEXT)''')
 		cursor_ACM.execute('''CREATE TABLE IF NOT EXISTS time(id INTEGER PRIMARY KEY, code TEXT, date_t TEXT, date_u INTEGER)''')
 		cursor_ACM.execute('''CREATE TABLE IF NOT EXISTS alarm(id INTEGER PRIMARY KEY, code TEXT, date_t TEXT, date_u INTEGER, a_date_t TEXT, a_date_u INTEGER)''')
 		cursor_ACM.execute('''CREATE TABLE IF NOT EXISTS alarm_on(id INTEGER PRIMARY KEY, code TEXT, name TEXT, scan INTEGER,date_t TEXT, date_u INTEGER, a_date_t TEXT, a_date_u INTEGER)''')
 		cursor_ACM.execute('''CREATE TABLE IF NOT EXISTS keep_alive(id INTEGER PRIMARY KEY, code TEXT,date_t TEXT, date_u INTEGER)''')
-		cursor_ACM.execute('''CREATE TABLE IF NOT EXISTS finish(code TEXT,date_t TEXT, date_u INTEGER, a_date_t TEXT, a_date_u INTEGER)''')
-		cursor_ACM.execute('''CREATE TABLE IF NOT EXISTS error(code TEXT, errc INTEGER, date_t TEXT, date_u INTEGER, a_date_t TEXT, a_date_u INTEGER)''')
+		cursor_ACM.execute('''CREATE TABLE IF NOT EXISTS finish(id INTEGER PRIMARY KEY,code TEXT,date_t TEXT, date_u INTEGER, a_date_t TEXT, a_date_u INTEGER)''')
+		cursor_ACM.execute('''CREATE TABLE IF NOT EXISTS error(id INTEGER PRIMARY KEY,code TEXT, errc INTEGER, date_t TEXT, date_u INTEGER, a_date_t TEXT, a_date_u INTEGER)''')
 		cursor_ACM.execute('''CREATE TABLE IF NOT EXISTS other(id INTEGER PRIMARY KEY, code TEXT, err INTEGER, date_t TEXT, date_u INTEGER)''')
 		conn.commit()
 
-	def csv_bulk(self):
+	def _csv_bulk(self):
 		with open(self.fileCSV,'r') as f:
 				reader = csv.reader(f)
 				for row in reader:
 					row_d = dict(zip(('code','type','dest_high','dest_low'),row))
 					self.insert(self.ENDPOINT,**row_d)
+		#with open('files/xbee_time.csv','r') as f:
+		#	reader = csv.reader(f)
+		#	for row in reader:
+		#		row_d = dict(zip(('code','date_t','date_u'),row))
+		#		self.insert(self.TIME,**row_d)
+		#with open('files/xbee_alarm.csv','r') as f:
+		#	reader = csv.reader(f)
+		#	for row in reader:
+		#		row_d = dict(zip(('code','date_u','date_t','a_date_u','a_date_t'),row))
+		#		self.insert(self.ALARM,**row_d)
+		#with open('files/xbee_finish.csv','r') as f:
+		#	reader = csv.reader(f)
+		#	for row in reader:
+		#		row_d = dict(zip(('code','date_u','date_t','a_date_u','a_date_t'),row))
+		#		self.insert(self.FINISH,**row_d)
 
+	def _make_delete_query(self,tag,where):
+		return 'DELETE FROM ' + self.table_name[tag] + (' WHERE ' + where if where != '' else where)
+	
+	def _make_select_query(self,tag,fields='*',where='',limit=0):
+		query = 'SELECT '
+		query += fields + ' FROM '
+		query += self.table_name[tag]
+		if where != '':
+			query += ' WHERE ' + where 
+		if limit != 0:
+			query += 'LIMIT ' + str(limit)
+		return query 
+
+	def _insert_bulk(self,tag, **args):
+		conn = sqlite3.connect(self.nameDB,timeout=30)
+		cursor_ACM = conn.cursor()
+		try:
+			#TODO
+			cursor_ACM.executemany()
+			conn.commit()
+		except Exception, e:
+			raise ValueError(e,'Error insert bulk data')
+		finally:
+			conn.close()
 
 	def insert(self, tag, **args ):
 		conn = sqlite3.connect(self.nameDB,timeout=10)
@@ -117,12 +153,12 @@ class acmDB(object):
 				print "Error INSERT " + str(self.ALARM_ON)
 		elif tag == self.FINISH:
 			if len(args) == 5:
-				cursor_ACM.execute('INSERT INTO finish VALUES (?,?,?,?,?)',(args["code"],args["date_t"],args["date_u"],args["a_date_t"],args["a_date_u"]))
+				cursor_ACM.execute('INSERT INTO finish VALUES (null,?,?,?,?,?)',(args["code"],args["date_t"],args["date_u"],args["a_date_t"],args["a_date_u"]))
 			else:
 				print "Error INSERT " + str(self.FINISH)
 		elif tag == self.ERROR:
 			if len(args) == 6:
-				cursor_ACM.execute('INSERT INTO error VALUES (?,?,?,?,?,?)',(args["code"],args["errc"],args["date_t"],args["date_u"],args["a_date_t"],args["a_date_u"]))
+				cursor_ACM.execute('INSERT INTO error VALUES (null,?,?,?,?,?,?)',(args["code"],args["errc"],args["date_t"],args["date_u"],args["a_date_t"],args["a_date_u"]))
 			else:
 				print "Error INSERT " + str(self.ERROR)
 		elif tag == self.OTHER:
@@ -136,24 +172,45 @@ class acmDB(object):
 		conn.commit()
 		conn.close()
 
-	def _make_select_query(self,tag,cond):
-		query = 'SELECT * FROM '
-		query += self.table_name[tag]
-		if cond != '':
-			query += ' WHERE ' 
-			query += cond
-		return query 
-
-	def select(self, tag, where=''):
+	def select(self, tag, fields ='', where='',fetch_one=False):
 		conn = sqlite3.connect(self.nameDB,timeout=10)
 		cursor_ACM = conn.cursor()
 		try:
-			cursor_ACM.execute(self._make_select_query(tag,where))
-			response =  cursor_ACM.fetchall()
-		except:
-			pass
-		conn.close()
-		return response
+			cursor_ACM.execute(self._make_select_query(tag,fields,where))
+			if fetch_one:
+				data = cursor_ACM.fetchone()
+			else:
+				data = cursor_ACM.fetchall()
+		except Exception, e:
+			raise ValueError(e)
+		finally:
+			conn.close()
+		return data
+
+	def is_empty(self,tag):
+		conn = sqlite3.connect(self.nameDB,timeout=10)
+		cursor_ACM = conn.cursor()
+		try:
+			cursor_ACM.execute(self._make_select_query(tag,fields='count(*)'))
+			data = cursor_ACM.fetchone()
+			value = 0 if data[0] == 0 else data[0]
+		except Exception, e:
+			raise ValueError(e)
+		finally:
+			conn.close()
+		return value
+
+	def delete(self,tag,where):
+		conn = sqlite3.connect(self.nameDB,timeout=30)
+		cursor_ACM = conn.cursor()
+		try:
+			data = cursor_ACM.execute(self._make_delete_query(tag,where)).rowcount
+		except Exception, e:
+			raise ValueError(e)
+		finally:
+			conn.commit()
+			conn.close()
+		return data
 
 	def check(self):
 		return os.path.isfile(self.nameDB)

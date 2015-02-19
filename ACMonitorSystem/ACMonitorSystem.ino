@@ -8,10 +8,12 @@
 #define THRESHOLD 0
 //********************************
 //FLAG XBEE
-#define TIME_FLAG 0x0f
-#define INIT_FLAG 0x55
-#define STATUS_FLAG 0x21
-#define STILL_ALIVE_FLAG 0x5d
+#define TIME_FLAG 0x0F
+#define KEEP_ALIVE_FLAG 0x21
+#define ALARM_FLAG 0x55
+#define AlARM_ON_FLAG 0x56
+#define FINISH_FLAG 0xAA
+#define ERROR_FLAG 0xFF
 //********************************
 //Pin preparation
 uint8_t ssRX = 1;
@@ -27,17 +29,20 @@ static const uint8_t aPin4 = 4;
 XBee xbee = XBee();
 XBeeAddress64 addr64  = XBeeAddress64();
 //Time Message
-uint8_t payloadTime[] = {0};
-ZBTxRequest zbTxTime = ZBTxRequest(addr64,payloadTime,sizeof(payloadTime));
-//Initial Trigger Message
-uint8_t payloadInit[] = {0,0,0,0,0};
-ZBTxRequest zbTxInit = ZBTxRequest(addr64,payloadInit,sizeof(payloadInit));
-//Status Alarm Message
-uint8_t payloadStat[] = {0,0,0,0,0};
-ZBTxRequest zbTxStat = ZBTxRequest(addr64,payloadStat,sizeof(payloadStat));
-//Still Alive Message
-uint8_t payloadAlive[] = {0};
-ZBTxRequest zbTxAlive = ZBTxRequest(addr64,payloadAlive,sizeof(payloadAlive));
+uint8_t payloadTime[]    = {0};
+ZBTxRequest zbTxTime     = ZBTxRequest(addr64,payloadTime,sizeof(payloadTime));
+//Alarm Message
+uint8_t payloadAlarm[]   = {0,0,0,0,0};
+ZBTxRequest zbTxAlarm    = ZBTxRequest(addr64,payloadAlarm,sizeof(payloadAlarm));
+//Alarm ON Message
+uint8_t payloadAlarmOn[] = {0,0,0,0,0,0,0,0,0,0};
+ZBTxRequest zbTxAlarmOn  = ZBTxRequest(addr64,payloadAlarmOn,sizeof(payloadAlarmOn));
+//Keep Alive Message
+uint8_t payloadAlive[]   = {0};
+ZBTxRequest zbTxAlive    = ZBTxRequest(addr64,payloadAlive,sizeof(payloadAlive));
+//Finish Message
+uint8_t payloadFinish[]  = {0,0,0,0,0};
+ZBTxRequest zbTxFinish   = ZBTxRequest(addr64,payloadFinish,sizeof(payloadFinish));
 //********************************
 //XBee Response
 ZBTxStatusResponse txStatus = ZBTxStatusResponse();
@@ -67,7 +72,18 @@ volatile boolean trigger_alarm = false;
 ISR(ANALOG_COMP_vect){
 	trigger_alarm=true;
 }
-//Int to Char for the Time
+
+/*-------------------------------------
+VOID intToChar(int value, char b)
+
+int value = Value to Transform
+char b    = Reference to char array
+
+Simple transform a int Value in 
+a Char Array (String)
+
+Return: NONE
+-------------------------------------*/
 void intToChar(int value, char *b){
   String aux;
   char a[10];
@@ -76,105 +92,144 @@ void intToChar(int value, char *b){
   strcpy(b,"T");
   strcat(b,a);
 }
+/*-------------------------------------
+VOID processTimeMessage(char *timeMSG)
 
-void processSyncMessage(char* timeMSG) {
-  	// time message consists of header & 10 ASCII digits
+char *timeMSG    = Char array, consist
+in header ('T') and 10 ASCII digits
+
+Set the internal clock of the Arduino
+to the 'timeMSG' value
+
+
+Return: NONE
+-------------------------------------*/
+void processTimeMessage(char* timeMSG) {
 	char c = timeMSG[0];  
 	if(c == TIME_HEADER){      
 	  time_t pctime = 0;
 	  for(int i=1; i < TIME_MSG_LEN -1; i++){  
 	    c = timeMSG[i];          
-	    if( c >= '0' && c <= '9'){
-	    	// convert digits to a number
-	      	pctime = (10 * pctime) + (c - '0');     
-	    }
+	    // convert digits to a number
+	    if( c >= '0' && c <= '9')
+	      	pctime = (10 * pctime) + (c - '0');   
 	  }
 	  // Sync Arduino clock to the time received on the serial port  
 	  setTime(pctime);   
 	}
 }
+/*-------------------------------------
+VOID sendTimeRequest()
 
+Send a TIME packet, and wait for a response
+
+
+return: None
+-------------------------------------*/
 void sendTimeRequest(){
-	//Time FLAG - 00001111
-	char datetime[11];
 	payloadTime[0] = TIME_FLAG;
 	xbee.send(zbTxTime);
-	int fin = 0;
 	//MEJORA DEFINIR UN TIEMPO DE INICIO Y UN MAXIMO
 	//Espero que me envien la respuesta para procesarla
+	char datetime[11];
+	int fin = 0;
 	boolean time_set = true;
 	while(time_set){
 		xbee.send(zbTxTime);
-		if (xbee.readPacket(500)) {
-			if(xbee.getResponse().isAvailable()){
-				if(xbee.getResponse().getApiId() == ZB_RX_RESPONSE){
-					//XBee SEND MESSAGE
-					xbee.getResponse().getZBRxResponse(rx);
-					if(rx.getOption() == ZB_PACKET_ACKNOWLEDGED){
-						//OBTENER LA HORA
-						//Cada 8 bit
-						for(int i = 0; i < rx.getDataLength();i++){
-							fin = (fin | rx.getData(i)) << 8;
+		if(millis() < 300000){
+			if (xbee.readPacket(500)) {
+				if(xbee.getResponse().isAvailable()){
+					if(xbee.getResponse().getApiId() == ZB_RX_RESPONSE){
+						//XBee SEND MESSAGE
+						xbee.getResponse().getZBRxResponse(rx);
+						if(rx.getOption() == ZB_PACKET_ACKNOWLEDGED){
+							//OBTENER LA HORA
+							//Cada 8 bit
+							for(int i = 0; i < rx.getDataLength();i++){
+								fin = (fin | rx.getData(i)) << 8;
+							}
+							time_set = false;
+							intToChar(fin,datetime);
+							processTimeMessage(datetime);
 						}
-						intToChar(fin,datetime);
-						processSyncMessage(datetime);
 					}
-					else{
-						//Recibio ZB_BROADCAST_PACKET
-						Serial.println("ZB_BROADCAST_PACKET");
+					else if(xbee.getResponse().getApiId() == MODEM_STATUS_RESPONSE){
+					    //XBee Modem Message
+					    xbee.getResponse().getModemStatusResponse(msr);
+					    if(msr.getStatus() == ASSOCIATED){
+					    	Serial.println("MODEM_ASSOCIATED");
+					    }
+					    else if(msr.getStatus() == DISASSOCIATED){
+					    	Serial.println("MODEM_DISASSOCIATED");
+					    }
 					}
 				}
-				else if(xbee.getResponse().getApiId() == MODEM_STATUS_RESPONSE){
-				    //XBee Modem Message
-				    xbee.getResponse().getModemStatusResponse(msr);
-				    if(msr.getStatus() == ASSOCIATED){
-				    	//SABER QUE HACER ACA
-				    	Serial.println("MODEM_ASSOCIATED");
-				    }
-				    else if(msr.getStatus() == DISASSOCIATED){
-				    	//ACA TAMBIEN
-				    	Serial.println("MODEM_DISASSOCIATED");
-				    }
+				else if(xbee.getResponse().isError()){
+					Serial.print("ERROR: ");
+					Serial.println(xbee.getResponse().getErrorCode());
 				}
 			}
-			else if(xbee.getResponse().isError()){
-				//ERROR
-				Serial.print("ERROR: ");
-				Serial.println(xbee.getResponse().getErrorCode());
-			}
+			delay(1000);
 		}
-		delay(1000);
+		else{
+			time_set = false;
+		}
 	}
 }
+/*-------------------------------------
+BOOLEAN sendAlarm()
 
-boolean sendInitialAlarm(){
-	//Flag
-	payloadInit[0] = INIT_FLAG; 
-	// Time
+Send a XBee packet with a ALARM PACKET
+until that the coordinator recieve the 
+message and receive a response TX_STATUS 
+
+return: TRUE
+-------------------------------------*/
+boolean sendAlarm(){
+	//ALARM_FLAG
+	payloadAlarm[0] = ALARM_FLAG; 
+	//Prepare the Time DATA
 	currentTime = now();
-	payloadInit[1] = currentTime >> 24 & 0xff;
-	payloadInit[2] = currentTime >> 16 & 0xff;
-	payloadInit[3] = currentTime >> 8 & 0xff;
-	payloadInit[4] = currentTime & 0xff;
- 	//Enviar mensaje de aviso
+	payloadAlarm[1] = currentTime >> 24 & 0xff;
+	payloadAlarm[2] = currentTime >> 16 & 0xff;
+	payloadAlarm[3] = currentTime >> 8 & 0xff;
+	payloadAlarm[4] = currentTime & 0xff;
+
  	while(trigger){
- 		xbee.send(zbTxInit);
- 		if (xbee.readPacket(500)) {
-		    // got a response!
+ 		xbee.send(zbTxAlarm);
+ 		//wait until receive a TX_STATUS response
+ 		if (xbee.readPacket(500)){
 		    if (xbee.getResponse().getApiId() == ZB_TX_STATUS_RESPONSE) {
 		      	xbee.getResponse().getZBTxStatusResponse(txStatus);
-		      	// get the delivery status, the fifth byte
+		      	//Check if it succefull
 		      	if (txStatus.getDeliveryStatus() == SUCCESS)
 		      		trigger = false;
 		    }
 		}
 		delay(1000);
 	}
-
 	return true;
 }
+/*-------------------------------------
+VOID sendAlarmOn()
 
-void sendStatusAlarm(){
+Send a Zigbee/XBee packet with a ALARM ON
+PACKET wich contain
+Byte 0 - FLAG
+Byte 1 - TIME 1
+Byte 2 - TIME 2
+Byte 3 - TIME 3
+Byte 4 - TIME 4
+Byte 5 - THRESHOLD
+Byte 6 - ALARM 1
+Byte 7 - ALARM 2
+Byte 8 - ALARM 3
+Byte 9 - ALARM 4
+Don't wait TX_STATUS Response
+
+return: None
+-------------------------------------*/
+void sendAlarmOn(){
 	//Check the status of the alarm
 	alarmChiller0 = analogRead(A1);
 	alarmGeneral0 = analogRead(A2);
@@ -185,23 +240,69 @@ void sendStatusAlarm(){
 	outputGeneral0 =  map(alarmGeneral0,0,1023,0,255);
 	outputChiller1 =  map(alarmChiller1,0,1023,0,255);
 	outputGeneral1 =  map(alarmGeneral1,0,1023,0,255);
-	//StatusAlarm FLAG
-	payloadInit[0] = STATUS_FLAG;
-	//StatusAlarm INFO
- 	payloadInit[1] = outputChiller0 & 0xff; 
-	payloadInit[2] = outputGeneral0 & 0xff;
-	payloadInit[3] = outputChiller1 & 0xff;
-	payloadInit[4] = outputGeneral1 & 0xff;
+	//Alarm_On FLAG
+	payloadAlarmOn[0] = STATUS_FLAG;
+	//Alarm_On TIME
+	payloadAlarmOn[1] = STATUS_FLAG;
+	payloadAlarmOn[2] = STATUS_FLAG;
+	payloadAlarmOn[3] = STATUS_FLAG;
+	payloadAlarmOn[4] = STATUS_FLAG;
+	//Alarm_On THRESHOLD
+	payloadAlarmOn[5] = THRESHOLD;
+	//Alarm_On INFO
+ 	payloadAlarmOn[6] = outputChiller0 & 0xff; 
+	payloadAlarmOn[7] = outputGeneral0 & 0xff;
+	payloadAlarmOn[8] = outputChiller1 & 0xff;
+	payloadAlarmOn[9] = outputGeneral1 & 0xff;
 	//Send Message
-	xbee.send(zbTxStat);
+	xbee.send(zbTxAlarmOn);
 }
+/*-------------------------------------
+VOID sendKeepAlive()
 
-void sendStillAlive(){
+Send a Zigbee/XBee packet with a 
+KEEP ALIVE PACKET wich contain
+Byte 0 - FLAG
+Don't wait TX_STATUS Response
+
+return: None
+-------------------------------------*/
+
+void sendKeepAlive(){
 	//Still Alive FLAG
-	payloadAlive[0] = STILL_ALIVE_FLAG;
-	xbee.send(zbTxAlive);
+	payloadAlive[0] = KEEP_ALIVE_FLAG;
+	xbee.send(zbTxKeepAlive);
 }
+/*-------------------------------------
+VOID sendFinish()
 
+Send a FINISH Packet 
+Byte 0 - FLAG
+Byte 1 - TIME 1
+Byte 2 - TIME 2
+Byte 3 - TIME 3
+Byte 4 - TIME 4
+Don't wait TX_STATUS Response
+
+return: None
+-------------------------------------*/
+void sendFinish(){
+	currentTime = now();
+	payloadFinish[0] = FINISH_FLAG;
+	payloadFinish[1] = currentTime >> 24 & 0xFF;
+	payloadFinish[2] = currentTime >> 16 & 0xFF;
+	payloadFinish[3] = currentTime >> 8 & 0xFF;
+	payloadFinish[4] = currentTime & 0xFF;
+	xbee.send(zbTxFinish)
+}
+/*-------------------------------------
+BOOLEAN status()
+
+Check if ALL Analog Inputs are behind 
+the THRESHOLD, 
+return: TRUE, if below THRESHOLD
+return: FALSE, if above THRESHOLD
+-------------------------------------*/
 boolean status(){
 	alarmChiller0 = analogRead(A1);
 	alarmGeneral0 = analogRead(A2);
@@ -214,7 +315,17 @@ boolean status(){
 	}
 	return true;
 }
+/*-------------------------------------
+VOID setup()
 
+Main function Arduino
+- Set XBee/ZigBee
+- Set the PINS
+- Set Analog Comparator
+- Send Time Request
+
+return: None
+-------------------------------------*/
 void setup(){
 	//XBee Initilization
 	Serial.begin(9600);
@@ -243,18 +354,31 @@ void setup(){
   	sendTimeRequest();
   	stillAliveTime = now();
 }
+/*-------------------------------------
+VOID Loop()
 
-
+Main function Arduino
+- Check if Trigger = TRUE
+ - IF TRUE send ALARM PACKET
+- Check if Trigger_alarm = TRUe
+ - IF TRUE send ALARM ON
+ - Check status()
+- Send Keep Alive packet every 5 Min 
+return: None
+-------------------------------------*/
 void loop(){
 	if(trigger){
 		//Send Time 
-		trigger_alarm = sendInitialAlarm();
+		trigger_alarm = sendAlarm();
 	}
 	while(trigger_alarm){
- 		sendStatusAlarm();
+ 		sendAlarmOn();
  		//Check the Alarm status
 		trigger_alarm = status();
 		//If the alarm set on meanwhile
+		if(trigger_alarm == false){
+			sendFinish();
+		}
 		if(trigger == true){
 			trigger_alarm = true;
 		}
@@ -263,6 +387,6 @@ void loop(){
 	//Send StillAliveMSG every 5 min
 	if(stillAliveTime + 300 > now()){
 		stillAliveTime = now();
-		sendStillAlive();
+		sendKeepAlive();
 	}
 }
