@@ -82,21 +82,6 @@ class acmDB(object):
 				for row in reader:
 					row_d = dict(zip(('code','type','dest_high','dest_low'),row))
 					self.insert(self.ENDPOINT,**row_d)
-		#with open('files/xbee_time.csv','r') as f:
-		#	reader = csv.reader(f)
-		#	for row in reader:
-		#		row_d = dict(zip(('code','date_t','date_u'),row))
-		#		self.insert(self.TIME,**row_d)
-		#with open('files/xbee_alarm.csv','r') as f:
-		#	reader = csv.reader(f)
-		#	for row in reader:
-		#		row_d = dict(zip(('code','date_u','date_t','a_date_u','a_date_t'),row))
-		#		self.insert(self.ALARM,**row_d)
-		#with open('files/xbee_finish.csv','r') as f:
-		#	reader = csv.reader(f)
-		#	for row in reader:
-		#		row_d = dict(zip(('code','date_u','date_t','a_date_u','a_date_t'),row))
-		#		self.insert(self.FINISH,**row_d)
 
 	def _make_delete_query(self,tag,where):
 		return 'DELETE FROM ' + self.table_name[tag] + (' WHERE ' + where if where != '' else where)
