@@ -221,10 +221,10 @@ Byte 2 - TIME 2
 Byte 3 - TIME 3
 Byte 4 - TIME 4
 Byte 5 - THRESHOLD
-Byte 6 - ALARM 1
-Byte 7 - ALARM 2
-Byte 8 - ALARM 3
-Byte 9 - ALARM 4
+Byte 6 - ALARM 1 Chiller1
+Byte 7 - ALARM 2 General1
+Byte 8 - ALARM 3 Chiller2
+Byte 9 - ALARM 4 General2
 Don't wait TX_STATUS Response
 
 return: None

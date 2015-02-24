@@ -1,0 +1,156 @@
+ALMA-ACM-MONITOR-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+	MODULE-IDENTITY, OBJECT-TYPE, Integer32,
+ 	NOTIFICATION-TYPE							FROM SNMPv2-SMI
+ 	netSnmp										FROM NET-SNMP-MIB
+;
+
+almaAcm MODULE-IDENTITY
+	LAST-UPDATED ""
+	ORGANIZATION "alma"
+	DESCRIPTION 
+		"ACM Objects for the A/C Monitoring System in ALMA"
+	::= {}
+
+almaAcmArduino OBJECT IDENTIFIER ::= {almaACM 1}
+almaAcmBBB OBJECT IDENTIFIER ::= {almaACM 2}
+almaAcmNotifications OBJECT IDENTIFIER ::= {almaACM 3}
+
+almaAcmInit OBJECT-TYPE
+	SYNTAX			Integer32	
+	MAX-ACCESS		
+	STATUS
+	DESCRIPTION
+	""
+::= { almaAcmArduino 1 }
+
+almaAcmKeep OBJECT-TYPE
+	SYNTAX
+	MAX-ACCESS
+	STATUS
+	DESCRIPTION
+	""
+::= { almaAcmArduino 2 }
+
+---
+--- Table Alma ACM Status 
+---
+
+almaAcmAlarmTable OBJECT-TYPE
+	SYNTAX		SEQUENCE OF AlmaAcmAlarmRows
+	MAX-ACCESS	not-accessible
+	STATUS 		current
+	DESCRIPTION
+	""
+::= { almaAcmArduino 4 }
+
+almaAcmAlarmEntry OBJECT-TYPE
+	SYNTAX 		AlmaAcmAlarmEntry
+	MAX-ACCESS 	not-accessible
+	STATUS 		current
+	DESCRIPTION
+	""
+	INDEX {  }
+::= { almaAcmAlarmTable 1 }
+
+--- AGREGAR UN INDEX INTERESANTE
+AlmaAcmAlarmEntry ::= SEQUENCE {
+	almaAcmAlarmTime ,
+	almaAcmChiller1  ,
+	almaAcmGeneral1  ,	
+	almaAcmChiller2  ,	
+	almaAcmGeneral2  ,	
+}
+
+almaAcmAlarmTime OBJECT-TYPE
+	SYNTAX
+	MAX-ACCESS
+	STATUS
+	DESCRIPTION
+::={ almaAcmAlarmEntry 1 }
+ 
+almaAcmGeneral1 OBJECT-TYPE
+	SYNTAX
+	MAX-ACCESS
+	STATUS 		current
+	DESCRIPTION 
+::={ almaAcmAlarmEntry 2 }
+
+almaAcmChiller1 OBJECT-TYPE
+	SYNTAX
+	MAX-ACCESS
+	STATUS 		current
+	DESCRIPTION 
+::={ almaAcmAlarmEntry 3 }
+
+almaAcmGeneral2 OBJECT-TYPE
+	SYNTAX
+	MAX-ACCESS
+	STATUS 		current
+	DESCRIPTION 
+::={ almaAcmAlarmEntry 4 }
+
+almaAcmChiller2 OBJECT-TYPE
+	SYNTAX
+	MAX-ACCESS
+	STATUS 		current
+	DESCRIPTION 
+::={ almaAcmAlarmEntry 5 }
+
+---
+--- BBB OBJECTS
+---
+
+almaAcmmBbbClean OBJECT-TYPE 
+	SYNTAX
+	MAX-ACCESS
+	STATUS
+	DESCRIPTION
+	""
+::= {almaAcmBbb 1 }
+
+
+---
+--- Notifications
+---
+
+almaAcmGeneral1Alarm NOTIFICATION-TYPE
+	OBJECTS { almaAcmGeneral1 }
+	STATUS 	current
+	DESCRIPTION: 
+		"Notification of the
+		 Status of the General Alarm 1"
+::={ almaAcmNotifications 1 }
+
+almaAcmChiller1Alarm NOTIFICATION-TYPE
+	OBJECTS { almaAcmGeneral1 }
+	STATUS 	current
+	DESCRIPTION: 
+		"Notification of the 
+		 Status of the Chiller Alarm 1"
+::={ almaAcmNotifications 2 }
+
+almaAcmGeneral2Alarm NOTIFICATION-TYPE
+	OBJECTS { almaAcmGeneral1 }
+	STATUS 	current
+	DESCRIPTION: 
+		"Notification of the
+		 Status of the General Alarm 2"
+::={ almaAcmNotifications 3 }
+
+almaAcmChiller2Alarm NOTIFICATION-TYPE
+	OBJECTS { almaAcmGeneral1 }
+	STATUS 	current
+	DESCRIPTION: 
+		"Notification of the Status of the General Alarm 2,
+		correspond to alert "
+::={ almaAcmNotifications 4 }
+
+almaAcmGeneralAlarm NOTIFICATION-TYPE
+	OBJECTS { almaAcmBbbClean }
+	STATUS current
+	DESCRIPTION
+	""
+::={ almaAcmNotifications 5 }
+END
