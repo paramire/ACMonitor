@@ -1,4 +1,5 @@
-import ACMsqlite, ACMmqtt
+import acmmodules.ACMsqlite as ACMsqlite
+import acmmodules.ACMmqtt as ACMmqtt
 import time
 """
 Name: alarm_trigger
@@ -14,8 +15,6 @@ def alarm_trigger(acm_sqlite):
 	if acm_sqlite.is_empty(0xAA) | acm_sqlite.is_empty(0x55):
 		max_id_alarm = acm_sqlite.select(0x55,fields='MAX(id)')[0]
 		max_id_finish = acm_sqlite.select(0xAA,fields='MAX(id)')[0]
-		print max_id_alarm 
-		print max_id_finish
 		alarm = acm_sqlite.select(0x55,fields='date_u',where='id = ' + str(max_id_alarm[0]),fetch_one=True)
 		finish = acm_sqlite.select(0xAA,fields='date_u',where='id = ' + str(max_id_finish[0]),fetch_one=True)
 
@@ -31,7 +30,7 @@ Delete the Database entry 3 month Old
 If the System is receving messages wait 2 min until
 check again
 
-Return: Noneb
+Return: None
 """
 def main():
 	#3 Month
