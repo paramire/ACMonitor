@@ -14,7 +14,7 @@ class Daemon:
                 self.stdout = stdout
                 self.stderr = stderr
                 self.pidfile = pidfile
-       
+
         def daemonize(self):
                 """
                 do the UNIX double-fork magic, see Stevens' "Advanced

@@ -40,6 +40,10 @@ class acmXbee(object):
 			ts += str(chr(ts_aux))
 		return ts
 
+	def wait_res(self):
+		response = self.xbee.wait_read_frame()
+		return self._get_data(response)
+
 	def _get_data(self,response):
 		var = {}
 		if response['id'] == 'rx':
@@ -70,10 +74,6 @@ class acmXbee(object):
 			var['status'] = response['deliver_status']
 		return [var,response]
 
-	def wait_res(self):
-		response = self.xbee.wait_read_frame()
-		return self._get_data(response)
-
 	def _receive_time_request(self,packet):
 		return {'flag':ord(packet[0])}
 
@@ -81,16 +81,16 @@ class acmXbee(object):
 		return {'flag':ord(packet[0])}
 
 	def _receive_alarm_request(self,packet):
+		res = {}
 		if len(packet) == 5:
-			res = {}
 			res['flag'] = ord(packet[0])
 			res['ts_u'] = self._hex_timestamp(packet[1:5])
 			res['ts_d'] = datetime.fromtimestamp(res['ts_u']).strftime("%d-%m-%Y %H:%M:%S")
 		return res
 
 	def _receive_alarm_on_request(self,packet):
+		res = {}
 		if len(packet) == 10:
-			res = {}
 			res['flag'] = ord(packet[0])
 			res['ts_u'] = self._hex_timestamp(packet[1:5])
 			res['ts_d'] = datetime.fromtimestamp(res['ts_u']).strftime("%d-%m-%Y %H:%M:%S")
@@ -102,16 +102,16 @@ class acmXbee(object):
 		return res
 
 	def _receive_finish_request(self,packet):
+		res = {}
 		if len(packet) == 5:
-			res = {}
 			res['flag'] = ord(packet[0])
 			res['ts_u'] = self._hex_timestamp(packet[1:5])
 			res['ts_d'] = datetime.fromtimestamp(res['ts_u']).strftime("%d-%m-%Y %H:%M:%S")
 		return res
 
 	def _receive_error_request(self,packet):
+		res = {}
 		if len(packet) == 6:
-			res = {}
 			res['flag'] = ord(packet[0])
 			res['ts_u'] = self._hex_timestamp(packet[1:5])
 			res['ts_d'] = datetime.fromtimestamp(res['ts_u']).strftime("%d-%m-%Y %H:%M:%S")

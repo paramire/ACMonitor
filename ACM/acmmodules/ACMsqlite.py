@@ -1,6 +1,5 @@
 import sqlite3, csv, os
 
-
 class acmDB(object):
     
 	table_name = {0x00:"endpoint",0x0F:"time",0x21:"keep_alive",0x55:"alarm",0x56:"alarm_on",0xAA:"finish",0xFF:"error",0x01:"other"}
@@ -46,13 +45,20 @@ class acmDB(object):
 	             {'name':'a_date_u','type':'integer'}]
 	        }
 
-	"""
-	Name: __init__
 
-	Set the Flags, and create and populate the SQLite3
-	Database if not exists, calling _prepare and _csv_bulk
-	"""
 	def __init__(self, nameDB, fileCSV ):
+		"""__init__ method
+
+		Set the Flags, and create and populate the SQLite3
+		Database if not exists, it's created by calling _prepare and _csv_bulk
+
+		Args:
+			nameDB(string): String with the location of the Database
+			fileCSV(string): String with the location of the CSV file of Endpoints
+
+		Returns:
+			None
+		"""
 		self.ENDPOINT   = 0x00
 		self.TIME       = 0x0F
 		self.KEEP_ALIVE = 0x21 
@@ -70,13 +76,16 @@ class acmDB(object):
 			self._csv_bulk()
 			conn.close()
 
-	"""
-	Name: _prepare(conn)
-	conn: Connection to the SQLite3 Database
-
-	Create the Tables for the ACM Database
-	"""
 	def _prepare(self,conn):
+		"""
+		Internal function, create the Tables for the ACM Database
+
+		Args:
+			conn (SQLite3 connection): Connection to the SQLite3 Database
+
+		Returns:
+			None
+		"""
 		cursor_ACM = conn.cursor()
 		cursor_ACM.execute('''CREATE TABLE IF NOT EXISTS endpoint(id INTEGER PRIMARY KEY, code TEXT, type TEXT, dest_high TEXT, dest_low TEXT)''')
 		cursor_ACM.execute('''CREATE TABLE IF NOT EXISTS time(id INTEGER PRIMARY KEY, code TEXT, date_t TEXT, date_u INTEGER)''')
@@ -88,56 +97,61 @@ class acmDB(object):
 		cursor_ACM.execute('''CREATE TABLE IF NOT EXISTS other(id INTEGER PRIMARY KEY, code TEXT, err INTEGER, date_t TEXT, date_u INTEGER)''')
 		conn.commit()
 
-	"""
-	Name: _csv_bulk
 
-	Read the CSV File, with the data of the Endpoint,
-	and insert it the Database
-	"""
 	def _csv_bulk(self):
+		"""
+		Internal function, Read the CSV File, with the data of the Endpoint, and insert it the Database
+
+		Args:
+			None
+	
+		Returns:
+			None
+		"""
 		with open(self.fileCSV,'r') as f:
 				reader = csv.reader(f)
 				for row in reader:
 					row_d = dict(zip(('code','type','dest_high','dest_low'),row))
 					self.insert(self.ENDPOINT,**row_d)
 
-	"""
-	Name: _make_delete_query
 
-	tag: TAG of the Table
-	where: Where Statement
-
-	Make the Query to delete the selected columns
-
-	return: DELETE query 
-	"""
 	def _make_delete_query(self,tag,where):
+		"""Create the DELETE query string
+
+		Args:
+			tag(int): TAG of the Table (Hex Value or Int Value)
+			where (string, optional): Where Statement, it doesn't need add 'WHERE'.
+		Returns: 
+			The DELETE query string 
+		"""
 		return 'DELETE FROM ' + self.table_name[tag] + (' WHERE ' + where if where != '' else where)
 	
 
-	"""
-	Name: _make_select_query
+	def _make_select_query(self,tag,fields,where='',limit=0):
+		"""
+		Internal function what create the SQLite SELECT query
+		The args fields, where and limit are optionals, if they are specified, will be added to
+		the Query
 
-	tag: TAG of the Table
-	fields: Fields of the Table
-	where: Where Statement
-	limit: limit of results
+		Args:
+			tag (int): TAG of the Table (Hex Value or Int Value)
+			fields (string,optional): Specific fields of the  target Table. Defaults to '*'
+			where (string, optional): Where Statement, doesn't need come with 'Where'. Defaults to '' 
+			limit: Query statement who limit the results. Default to 0
 
-	Make the Query to select columns
-
-	return: SELECT query 
-	"""
-	def _make_select_query(self,tag,fields='*',where='',limit=0):
+		Returns:
+			The SELECT query string 
+		"""
 		query = 'SELECT '
 		query += fields + ' FROM '
 		query += self.table_name[tag]
 		if where != '':
 			query += ' WHERE ' + where 
 		if limit != 0:
-			query += 'LIMIT ' + str(limit)
+			query += ' LIMIT ' + str(limit)
 		return query 
 
-	def _insert_bulk(self,tag, **args):
+	def insert_bulk(self,tag, **args):
 		conn = sqlite3.connect(self.nameDB,timeout=30)
 		cursor_ACM = conn.cursor()
 		try:
@@ -148,15 +162,19 @@ class acmDB(object):
 			raise ValueError(e,'Error insert bulk data')
 		finally:
 			conn.close()
-	"""
-	Name: insert
 
-	tag: TAG of Table
-	args: dictionary of the elements of the Table
-
-	Insert a row in the specific table
-	"""
 	def insert(self, tag, **args ):
+		"""Insert a row of a specific Table
+
+		Insert a row of the specific table
+		
+		Args:
+			tag(: TAG of Table
+			**args: dictionary of the elements of the Table
+
+		Returns:
+			None
+		"""
 		conn = sqlite3.connect(self.nameDB,timeout=10)
 		cursor_ACM = conn.cursor()
 		if tag ==  self.ENDPOINT:
@@ -205,45 +223,50 @@ class acmDB(object):
 		conn.commit()
 		conn.close()
 	
-	"""
-	Name: insert
 
-	tag: TAG of Table
-	fields: Table Fields (string)
-	where: where statement
-	fetch_one: if fetch_one=True, only return 1 result
+	def select(self, tag, fields='*', where='',fetch_one=False):
+		"""Select the data
 
-	Select data form database
+		SELECT query of the Table (tag), of the specified fields.
+		Can be specified if only want one result (Just the result not in 
+		a array) 
 
-	return data
-	"""
+		Args:
+			tag(int): TAG of Table (Hex Value or Int Value).
+			fields(string,optional): Table Fields. Default to ''.
+			where(string,optional): Where statement. Default to ''.
+			fetch_one(boolean,optional): if want only one result. Default to False.
 
-	def select(self, tag, fields ='', where='',fetch_one=False):
+		Returns:
+			Data selected
+		"""
 		conn = sqlite3.connect(self.nameDB,timeout=10)
 		cursor_ACM = conn.cursor()
 		try:
-			cursor_ACM.execute(self._make_select_query(tag,fields,where))
 			if fetch_one:
+				cursor_ACM.execute(self._make_select_query(tag,fields=fields,where=where,limit=1))
 				data = cursor_ACM.fetchone()
 			else:
+				cursor_ACM.execute(self._make_select_query(tag,fields,where))
 				data = cursor_ACM.fetchall()
+			if data is None:
+				data = {}
 		except Exception, e:
 			raise ValueError(e)
 		finally:
 			conn.close()
 		return data
 
-	"""
-	Name: is_empty
 
-	tag: TAG of Table
-
-	Check if a Table is empty
-
-	Return: 0 if empty, 
-			# of rows if not empty
-	"""
 	def is_empty(self,tag):
+		"""Check if a Table is empty
+		
+		Args:
+			tag(int): TAG of Table (Hex Value or Int Value)
+
+		Returns:
+			0 if empty,	Numbers of rows if not
+		"""
 		conn = sqlite3.connect(self.nameDB,timeout=10)
 		cursor_ACM = conn.cursor()
 		try:
@@ -255,17 +278,20 @@ class acmDB(object):
 		finally:
 			conn.close()
 		return value
-	"""
-	Name: delete
 
-	tag: TAG of Table
-	where: where statement
-
-	Delete if a Table
-
-	Return: # of rows deleted
-	"""
 	def delete(self,tag,where):
+		"""Delete the 
+		
+		Delete the specific rows of a Table, if needed to specify
+		the TAG of the table to delete, and the WHERE statement 
+
+		Args:
+			tag(int): TAG of Table (Hex Value or Int Value)
+			where(where): where statement
+
+		Returns:
+			Numbers of rows deleted
+		"""
 		conn = sqlite3.connect(self.nameDB,timeout=30)
 		cursor_ACM = conn.cursor()
 		try:
@@ -277,11 +303,13 @@ class acmDB(object):
 			conn.close()
 		return data
 
-		"""
-	Name: check
-	
-	Check if Database Exist
-	Return: True if exist, False if not
-	"""
+
 	def check(self):
+		"""	Check if Database Exist
+		
+		Args:
+			None
+		Returns:
+			True if exist, False otherwise
+		"""
 		return os.path.isfile(self.nameDB)
