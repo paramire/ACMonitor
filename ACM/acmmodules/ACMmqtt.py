@@ -16,7 +16,7 @@ class acmMQTT(object):
 	           'alarm'       :"(%s) ARDUINO - GENERAL ALARM",
 	           'alarm_on'    :"(%s) ARDUINO - ALARM (%s): (%s)",
 	           'finish'      :"(%s) ARDUINO - GENERAL ALARM FINISH",
-	           'status'      :"(%s) ARDUINO - CONNECTED, ALARM: %s",
+	           'status'      :"(%s) ARDUINO - CONNECTED, MODE: %s",
 	           'statusDisc'  :"(%s) ARDUINO - DISCONNECTED",
 	           'error'       :"(%s) BBB - ERROR: %s",
 	           'clean'       :"(%s) BBB - CLEAN - DELETED ROWS: %s"}
@@ -89,10 +89,12 @@ class acmMQTT(object):
 	def sendStatus(self,**kwargs):
 		if len(kwargs) == 2 or len(kwargs) == 3:
 			if kwargs['connected']:
-				if kwargs['alert']:
-					kwargs.update({'mode':"ON"})
+				if kwargs['alert'] == 0:
+					kwargs.update({'mode':"ALARM ON"})
+				elif kwargs['alert'] == 1:
+					kwargs.update({'mode':"ALARM OFF"})
 				else:
-					kwargs.update({'mode':"OFF"})
+					kwargs.update({'mode':"NOT CONNECTED"})
 				self.mqttc.publish(self.topic['status'],self._make_message('status',**kwargs))
 			else:
 				self.mqttc.publish(self.topic['status'],self._make_message('statusDisc',**kwargs))

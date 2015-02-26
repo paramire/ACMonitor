@@ -1,5 +1,6 @@
 import acmmodules.ACMsqlite as ACMsqlite
 import acmmodules.ACMmqtt as ACMmqtt
+import acmmodules.ACMconfig as ACMconfig
 import time
 
 def alarm_trigger(acm_sqlite):
@@ -12,7 +13,7 @@ def alarm_trigger(acm_sqlite):
 	Returns:
 		True, alarm is off, False otherwise 
 	"""
-	if acm_sqlite.is_empty(0xAA) | acm_sqlite.is_empty(0x55):
+	if acm_sqlite.is_empty(0xAA) or acm_sqlite.is_empty(0x55):
 		max_id_alarm = acm_sqlite.select(0x55,fields='MAX(id)',fetch_one=True)
 		max_id_finish = acm_sqlite.select(0xAA,fields='MAX(id)',fetch_one=True)
 		alarm = acm_sqlite.select(0x55,fields='date_u',where='id = ' + str(max_id_alarm[0]),fetch_one=True)
@@ -38,11 +39,14 @@ def main():
 		None
 	"""
 	#3 Month
-	month_gap = 2592000*3
-	acm_sqlite = ACMsqlite.acmDB('database/acm.bd','files/xbee_data.csv')
-	#if acm_sqlite.check():
-	#	print "SQLite " + str(acm_sqlite.nameDB) + " is Open"
-	acm_mqtt = ACMmqtt.acmMQTT('localhost',1883)
+	acm_config = ACMconfig.acmConfigParser()
+	month_gap = 2592000*int(acm_config.getGeneralConf('month_gap'))
+	acm_sqlite_conf = acm_config.getConf('sqlite')
+	acm_sqlite = ACMsqlite.acmDB(acm_sqlite_conf['dbDir'],acm_sqlite_conf['xbeeCSV'])
+
+	acm_mqtt_conf = acm_config.getConf('mqtt','topicWill','lastWill')
+	acm_mqtt = ACMmqtt.acmMQTT(acm_mqtt_conf['dest_ip'],acm_mqtt_conf['dest_port'])
+
 	
 	while True:
 		if alarm_trigger(acm_sqlite):

@@ -2,48 +2,55 @@ import sqlite3, csv, os
 
 class acmDB(object):
     
-	table_name = {0x00:"endpoint",0x0F:"time",0x21:"keep_alive",0x55:"alarm",0x56:"alarm_on",0xAA:"finish",0xFF:"error",0x01:"other"}
-	columns = {"endpoint":
-	            [{'name':'code','type':'text'},
-	             {'name':'type','type':'text'},
-	             {'name':'dest_high','type':'text'},
-	             {'name':'dest_low','type':'text'}],
-	           "time":
-	            [{'name':'code','type':'text'},
-	             {'name':'date_t','type':'text'},
-	             {'name':'date_u','type':'integer'}],
-	           "keep_alive":
-	            [{'name':'code','type':'text'},
-	             {'name':'date_t','type':'text'},
-	             {'name':'date_u','type':'integer'}],
-	           "alarm":
-	            [{'name':'code','type':'text'},
-	             {'name':'date_t','type':'text'},
-	             {'name':'date_u','type':'integer'},
-	             {'name':'a_date_t','type':'text'},
-	             {'name':'a_date_u','type':'integer'}],
-	           "alarm_on":
-	            [{'name':'code','type':'text'},
-	             {'name':'name','type':'text'},
-	             {'name':'scan','type':'integer'},
-	             {'name':'date_t','type':'text'},
-	             {'name':'date_u','type':'integer'},
-	             {'name':'a_date_t','type':'integer'},
-	             {'name':'a_date_u','type':'integer'}],
-	           "finish":
-	            [{'name':'code','type':'text'},
-	             {'name':'date_t','type':'text'},
-	             {'name':'date_u','type':'integer'},
-	             {'name':'a_date_t','type':'text'},
-	             {'name':'a_date_u','type':'integer'}],
-	           "error":
-	            [{'name':'code','type':'text'},
-	             {'name':'error','type':'integer'},
-	             {'name':'date_t','type':'text'},
-	             {'name':'date_u','type':'integer'},
-	             {'name':'a_date_t','type':'text'},
-	             {'name':'a_date_u','type':'integer'}]
-	        }
+	table_name = {0x00:"endpoint",
+	              0x0F:"time",
+	              0x21:"keep_alive",
+	              0x55:"alarm",
+	              0x56:"alarm_on",
+	              0xAA:"finish",
+	              0xFF:"error",
+	              0x01:"other"}
+	table_fields = {0x00:"(null,?,?,?,?)",
+	                0x0F:"(null,?,?,?)",
+	                0x21:"(null,?,?,?)",
+	                0x55:"(null,?,?,?,?,?)",
+	                0x56:"(null,?,?,?,?,?,?,?)",
+	                0xAA:"(null,?,?,?,?,?)",
+	                0xFF:"(null,?,?,?,?,?,?)",
+	                0x01:"(null,?,?,?,?)"}
+
+	tables = {0x00:{'name':'endpoint',
+	                'fields':['id','code','type','dest_high','dest_low'],
+	                'values':"(null,?,?,?,?)",
+	                'len':5},
+	          0x0F:{'name':'time',
+	                'fields':['id','code','date_t','date_u'],
+	                'values':'(null,?,?,?)',
+	                'len':4},
+	          0x21:{'name':'keep_alive',
+	                'fields':['id','code','date_t','date_u'],
+	                'value:':'(null,?,?,?)',
+	                'len':4},
+	          0x55:{'name':'alarm',
+	                'fields':['id','code','date_t','date_u','a_date_t','a_date_u'],
+	                'values':'(null,?,?,?,?,?)',
+	                'len':5},
+	          0x56:{'name':'alarm_on',
+	                'fields':['id','code','name','scan','date_t','date_u','a_date_t','a_date_u'],
+	                'values':'(null,?,?,?,?,?,?,?)',
+	                'len':8},
+	          0xAA:{'name':'finish',
+	                'fields':['id','code','date_t','date_u','a_date_t','a_date_u'],
+	                'values':'(null,?,?,?,?,?)',
+	                'len':6},
+	          0xFF:{'name':'error',
+	                'fields':['id','code','errc','date_t','date_u','a_date_t','a_date_u'],
+	                'values':'(null,?,?,?,?,?,?)',
+	                'len':7},
+	          0x01:{'name':'other',
+	                'fields':['id','err','date_t','date_u'],
+	                'values':'(null,?,?,?,?)',
+	                'len':5}}
 
 
 	def __init__(self, nameDB, fileCSV ):
@@ -151,17 +158,26 @@ class acmDB(object):
 			query += ' LIMIT ' + str(limit)
 		return query 
 
-	def insert_bulk(self,tag, **args):
-		conn = sqlite3.connect(self.nameDB,timeout=30)
-		cursor_ACM = conn.cursor()
-		try:
-			#TODO
-			cursor_ACM.executemany()
-			conn.commit()
-		except Exception, e:
-			raise ValueError(e,'Error insert bulk data')
-		finally:
-			conn.close()
+	def _check_fields(self,tag,data):
+		for row in data:
+			if len(row) != tables[tag][len]-1:
+				return False
+		return True
+
+	def insert_bulk(self,tag, data):
+		if self._check_fields(tag,data):
+			conn = sqlite3.connect(self.nameDB,timeout=30)
+			cursor_ACM = conn.cursor()
+			try:
+				query = "INSERT INTO %s VALUE %s", (tables[tag][name],table_fields[tag][values])
+				cursor_ACM.executemany(query,data)
+				conn.commit()
+			except Exception, e:
+				raise ValueError(e,'Error insert bulk data')
+			finally:
+				conn.close()
+		else:
+			raise ValueError("Number of arguments in data")
 
 	def insert(self, tag, **args ):
 		"""Insert a row of a specific Table
@@ -181,44 +197,44 @@ class acmDB(object):
 			if len(args) == 4:
 				cursor_ACM.execute('''INSERT INTO endpoint VALUES (null,?,?,?,?)''',(args['code'],args['type'],args['dest_high'],args['dest_low']))
 			else:
-				print "Error INSERT " + str(self.ENDPOINT)
+				raise ValueError("Error INSERT " + str(self.ENDPOINT))
 		elif tag == self.TIME:
 			if len(args) == 3:
 				cursor_ACM.execute('''INSERT INTO time VALUES (null,?,?,?)''',(args['code'],args['date_t'],args['date_u']))
 			else:
-				print "Error INSERT " + str(self.TIME)
+				raise ValueError("Error INSERT " + str(self.TIME))
 		elif tag == self.KEEP_ALIVE:
 			if len(args) == 3:
 				cursor_ACM.execute('INSERT INTO keep_alive VALUES (null,?,?,?)',(args["code"],args["date_t"],args["date_u"]))
 			else:
-				print "Error INSERT " + str(self.KEEP_ALIVE)
+				raise ValueError("Error INSERT " + str(self.KEEP_ALIVE))
 		elif tag == self.ALARM:
 			if len(args) == 5:
 				cursor_ACM.execute('INSERT INTO alarm VALUES (null,?,?,?,?,?)',(args["code"],args["date_t"],args["date_u"],args["a_date_t"],args["a_date_u"]))
 			else:
-				print "Error INSERT " + str(self.ALARM)
+				raise ValueError("Error INSERT " + str(self.ALARM))
 		elif tag == self.ALARM_ON:
 			if len(args) == 7:
 				cursor_ACM.execute('INSERT INTO alarm_on VALUES (null,?,?,?,?,?,?,?)',(args["code"],args["name"],args["scan"],args["date_t"],args["date_u"],args["a_date_t"],args["a_date_u"]))
 			else:
-				print "Error INSERT " + str(self.ALARM_ON)
+				raise ValueError("Error INSERT " + str(self.ALARM_ON))
 		elif tag == self.FINISH:
 			if len(args) == 5:
 				cursor_ACM.execute('INSERT INTO finish VALUES (null,?,?,?,?,?)',(args["code"],args["date_t"],args["date_u"],args["a_date_t"],args["a_date_u"]))
 			else:
-				print "Error INSERT " + str(self.FINISH)
+				raise ValueError("Error INSERT " + str(self.FINISH))
 		elif tag == self.ERROR:
 			if len(args) == 6:
 				cursor_ACM.execute('INSERT INTO error VALUES (null,?,?,?,?,?,?)',(args["code"],args["errc"],args["date_t"],args["date_u"],args["a_date_t"],args["a_date_u"]))
 			else:
-				print "Error INSERT " + str(self.ERROR)
+				raise ValueError("Error INSERT " + str(self.ERROR))
 		elif tag == self.OTHER:
 			if len(args) == 4:
 				cursor_ACM.execute('INSERT INTO other VALUES (null,?,?,?,?)',(args["code"],args["err"],args["date_t"],args["date_u"]))
 			else:
-				print "Error INSERT " + str(self.OTHER)
+				raise ValueError("Error INSERT " + str(self.OTHER))
 		else:
-			print "ERROR"
+			raise ValueError("ERROR")
 
 		conn.commit()
 		conn.close()

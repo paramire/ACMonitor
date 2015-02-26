@@ -1,0 +1,19 @@
+[xbee]
+baud = 9600
+uart = None
+port = /dev/ttyO1
+
+[sqlite]
+xbeecsv = files/xbee_data.csv
+dbdir = database/acm.bd
+
+[mqtt]
+topicwill = ACM/BBB/status
+lastwill = ERROR: BBB Lost
+destport = 1883
+dest_ip = localhost
+
+[general]
+sleep_time = 150
+month_gap = 3
+

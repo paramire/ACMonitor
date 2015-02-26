@@ -136,7 +136,7 @@ void sendTimeRequest(){
 
 	while(time_set){
 		xbee.send(zbTxTime);
-		if(init_time - millis() < 300000){
+		if(init_time - millis() < 120000){
 			if (xbee.readPacket(500)) {
 				if(xbee.getResponse().isAvailable()){
 					if(xbee.getResponse().getApiId() == ZB_RX_RESPONSE){
@@ -146,6 +146,7 @@ void sendTimeRequest(){
 							for(int i = 0; i < rx.getDataLength();i++){
 								fin = (fin | rx.getData(i)) << 8;
 							}
+							fin -= millis()
 							time_set = false;
 							time_setted = true;
 							intToChar(fin,datetime);
@@ -293,7 +294,21 @@ void sendFinish(){
 	payloadFinish[2] = currentTime >> 16 & 0xFF;
 	payloadFinish[3] = currentTime >> 8  & 0xFF;
 	payloadFinish[4] = currentTime & 0xFF;
+
+ 	while(true){
 	xbee.send(zbTxFinish);
+	//wait until receive a TX_STATUS response
+	if (xbee.readPacket(500)){
+	    if (xbee.getResponse().getApiId() == ZB_TX_STATUS_RESPONSE) {
+	      	xbee.getResponse().getZBTxStatusResponse(txStatus);
+	      	//Check if it succefull
+	      	if (txStatus.getDeliveryStatus() == SUCCESS)
+	      		break;
+		    }
+		}
+		delay(1000);
+	}
+
 }
 /*-------------------------------------
 BOOLEAN status()
