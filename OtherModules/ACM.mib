@@ -8,9 +8,14 @@ IMPORTS
 
 almaAcm MODULE-IDENTITY
 	LAST-UPDATED ""
-	ORGANIZATION "alma"
+	ORGANIZATION "www.alma.cl"
+	CONTACT-INFO
+		"postal:	ALMA
+					Alons"
 	DESCRIPTION 
 		"ACM Objects for the A/C Monitoring System in ALMA"
+	DESCRIPTION
+		"First draft"
 	::= {}
 
 almaAcmArduino OBJECT IDENTIFIER ::= {almaACM 1}
