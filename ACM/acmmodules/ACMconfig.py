@@ -13,6 +13,16 @@ class acmConfigParser():
                    'general':{'month_gap':3,
                               'sleep_time':150}}
 	def __init__(self):
+		""" __init___ acmConfigParser
+
+		Create a ConfigParser, then check if exist a configuration
+		file, if don't, create a new one, if exist read the configurations
+
+		Args:
+			None
+		Returns:
+			None
+		"""
 		self.config = ConfigParser.RawConfigParser()
 		if not(os.path.isfile('acm.cfg')):
 			for key in self.config_data:
@@ -25,6 +35,21 @@ class acmConfigParser():
 			self.config.read('acm.cfg')
 
 	def getConf(self,section,*args):
+		"""Get all the configuration of the specific configuration
+
+		Retrieve all the configuration data in the file of the
+		specific section
+		it posible specify which field want to DON'T be retrieved
+
+		Args:
+			section (string): section string
+			*args (Array): Array of configuration we don't want
+
+		Returns:
+			Array of the data	
+		Raise:
+			If don't exist configuration entry in the File
+		"""
 		data = {}
 		if self.config.has_section(section):
 			for row in self.config_data[section]:
@@ -36,6 +61,13 @@ class acmConfigParser():
 		return data
 
 	def getGeneralConf(self,general_conf):
+		"""Retrieve a general configuration
+
+		Returns:
+			Configuration data
+		Raise:
+			If don't exist configuration entry in the File
+		"""
 		if self.config.has_option('general',general_conf):
 			return self.config.get('general',general_conf)
 		else:

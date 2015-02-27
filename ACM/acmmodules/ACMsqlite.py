@@ -159,12 +159,36 @@ class acmDB(object):
 		return query 
 
 	def _check_fields(self,tag,data):
+		"""Internal function to check if the data given 
+		
+		Internal function to check if the data given 
+		has the same arguments that the table
+	
+		Args:
+			tag(integer): TAG of the Table (Hex Value or Int Value)
+			data (array): Array of the data (array)
+		Returns:
+			True if all data is correct, False otherwise
+		"""
 		for row in data:
 			if len(row) != tables[tag][len]-1:
 				return False
 		return True
 
+
 	def insert_bulk(self,tag, data):
+		"""Insert bulk data
+
+		Insert in the specific table the data given
+		The data correspon a array of array with the data for each new row
+		in the destination table
+
+		Args:
+			tag (integer): TAG of the Table (Hex Value or Int Value)
+			data (array): Array of the data (array)
+		Returns:
+			None
+		"""
 		if self._check_fields(tag,data):
 			conn = sqlite3.connect(self.nameDB,timeout=30)
 			cursor_ACM = conn.cursor()
