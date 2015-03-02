@@ -163,27 +163,58 @@ def arduino_watch(acm_mqtt, acm_config):
             break
 
 
-def main():
-    """Main function
+#def main():
 
-    Prepare the ACMmqtt object and Configurations
-    Create the Threads for Arduino_status and Arduino_Watch
+#    acm_config = ACMconfig.acmConfigParser()
+#    acm_mqtt_conf = acm_config.getConf('mqtt')
+#    acm_mqtt = ACMmqtt.acmMQTT(acm_mqtt_conf['dest_ip'],acm_mqtt_conf['dest_port'],acm_mqtt_conf['topic_will'],acm_mqtt_conf['last_will'],True)
+#    thread_watch = Thread(target = arduino_watch, args=(acm_mqtt,acm_config,))
+#    thread_alarm = Thread(target = arduino_status, args=(acm_mqtt,acm_config,))
+#    thread_alarm.start()
+#    thread_watch.start()
+#    thread_alarm.join()
+#    acm_mqtt.close()
 
-    Args:
-        None
 
-    Returns:
-        None
-    """
-    acm_config = ACMconfig.acmConfigParser()
-    acm_mqtt_conf = acm_config.getConf('mqtt')
-    acm_mqtt = ACMmqtt.acmMQTT(acm_mqtt_conf['ddest_ip'],acm_mqtt_conf['dest_port'],acm_mqtt_conf['topic_will'],acm_mqtt_conf['last_will'],True)
-    thread_watch = Thread(target = arduino_watch, args=(acm_mqtt,acm_config,))
-    thread_alarm = Thread(target = arduino_status, args=(acm_mqtt,acm_config,))
-    thread_alarm.start()
-    thread_watch.start()
-    thread_alarm.join()
-    acm_mqtt.close()
+class MyDaemon(Daemon):
+    def run(self):
+        """Main function
+        
+        Prepare the ACMmqtt object and Configurations
+        
+        Create the Threads for Arduino_status and Arduino_Watch
+        
+        Args:
+            None
+        
+        Returns:
+            None
+        """
+        os.chdir("/home/pramirez/proyects/ACM/ACM/")
+        acm_config = ACMconfig.acmConfigParser()
+        acm_mqtt_conf = acm_config.getConf('mqtt')
+        acm_mqtt = ACMmqtt.acmMQTT(acm_mqtt_conf['dest_ip'],acm_mqtt_conf['dest_port'],acm_mqtt_conf['topic_will'],acm_mqtt_conf['last_will'],True)
+        thread_watch = Thread(target = arduino_watch, args=(acm_mqtt,acm_config,))
+        thread_alarm = Thread(target = arduino_status, args=(acm_mqtt,acm_config,))
+        thread_alarm.start()
+        thread_watch.start()
+        thread_alarm.join()
+        acm_mqtt.close()
  
 if __name__ == "__main__":
-    main()
+    #main()
+    daemon = MyDaemon('/tmp/acm.pid',stdout="/var/log/acm.log",stderr="/var/log/acm.err")
+    if len(sys.argv) == 2:
+        if 'start' == sys.argv[1]:
+            daemon.start()
+        elif 'stop' == sys.argv[1]:
+            daemon.stop()
+        elif 'restart' == sys.argv[1]:
+            daemon.restart()
+        else:
+            print "Unknown command"
+            sys.exit(2)
+        sys.exit(0)
+    else:
+        print "usage: %s start|stop|restart" % sys.argv[0]
+        sys.exit(2)

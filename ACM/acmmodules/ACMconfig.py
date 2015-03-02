@@ -1,7 +1,7 @@
 import ConfigParser, os
 
 class acmConfigParser():
-	config_data = {'xbee':{'port':'/dev/ttyO1',
+	config_data = {'xbee':{'port':'/dev/ttyUSB0',
                            'baud':9600,
                            'uart':None},
                    'sqlite':{'db_dir':'database/acm.bd',
@@ -11,7 +11,8 @@ class acmConfigParser():
                            'topic_will':'ACM/BBB/status',
                            'last_will':'ERROR: BBB Lost'},
                    'general':{'month_gap':3,
-                              'sleep_time':150}}
+                              'sleep_time':150,
+                              'gen_dir':'/home/ACM/ACM/ACM'}}
 	def __init__(self):
 		""" __init___ acmConfigParser
 
