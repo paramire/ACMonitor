@@ -9,12 +9,12 @@ class Daemon:
        
         Usage: subclass the Daemon class and override the run() method
         """
-        def __init__(self, pidfile, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null',dir="/"):
+        def __init__(self, pidfile, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
                 self.stdin = stdin
                 self.stdout = stdout
                 self.stderr = stderr
                 self.pidfile = pidfile
-                self.dir = dir
+                self.dir = os.getcwd()
 
         def daemonize(self):
                 """
@@ -46,6 +46,13 @@ class Daemon:
                         sys.stderr.write("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
                         sys.exit(1)
        
+       
+                # write pidfile
+                atexit.register(self.delpid)
+                pid = str(os.getpid())
+                file(self.pidfile,'w+').write("%s\n" % pid)
+                
+                os.chdir(self.dir)
                 # redirect standard file descriptors
                 sys.stdout.flush()
                 sys.stderr.flush()
@@ -55,11 +62,6 @@ class Daemon:
                 os.dup2(si.fileno(), sys.stdin.fileno())
                 #os.dup2(so.fileno(), sys.stdout.fileno())
                 #os.dup2(se.fileno(), sys.stderr.fileno())
-       
-                # write pidfile
-                atexit.register(self.delpid)
-                pid = str(os.getpid())
-                file(self.pidfile,'w+').write("%s\n" % pid)
        
         def delpid(self):
                 os.remove(self.pidfile)

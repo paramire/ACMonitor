@@ -10,11 +10,9 @@ class acmConfigParser():
                            'dest_port':1883,
                            'topic_will':'ACM/BBB/status',
                            'last_will':'ERROR: BBB Lost',
-                           'mqtt_prefix':'',
                            'client':'ACM_pub'},
                    'general':{'month_gap':3,
-                              'sleep_time':150,
-                              'gen_dir':'/home/ACM/ACM/ACM-script'}}
+                              'sleep_time':150}}
 	def __init__(self):
 		""" __init___ acmConfigParser
 
@@ -62,6 +60,13 @@ class acmConfigParser():
 					else:
 						raise ValueError('No configuration for %s, %s', (row,section))
 		return data
+
+	def getOneConf(self,section,conf):
+
+		if self.config.has_option(section,conf):
+			return self.config.get(section,conf)
+		else:
+			raise ValueError ('No configuration for %s, %s', (row,section))
 
 	def getGeneralConf(self,general_conf):
 		"""Retrieve a general configuration

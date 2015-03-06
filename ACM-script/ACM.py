@@ -31,7 +31,7 @@ def arduino_status(acm_mqtt, acm_config):
     acm_sqlite = ACMsqlite.acmDB(acm_sqlite_conf['db_dir'],acm_sqlite_conf['xbee_csv'])
 
     while True:
-        time.sleep(150)
+        time.sleep(10)
         now = int(time.time())
         keep_alive = acm_sqlite.select(0x21,where='id = (SELECT MAX(id) FROM ' + acm_sqlite.table_name[0x21] + ')',fetch_one=True)
         if len(keep_alive) > 0:
@@ -48,7 +48,7 @@ def arduino_status(acm_mqtt, acm_config):
             else:
                 acm_mqtt.sendStatus(time=now,connected=True,alert=1)
         else:
-            acm_mqtt.sendStatus(time=now,connected=True,alert=2)
+            acm_mqtt.sendStatus(time=now,connected=False)
 
 def arduino_watch(acm_mqtt, acm_config):
     """Watch the XBEE messages
@@ -176,10 +176,9 @@ class MyDaemon(Daemon):
         Returns:
             None
         """
-        os.chdir("/home/pramirez/proyects/ACM/ACM/")
         acm_config = ACMconfig.acmConfigParser()
         acm_mqtt_conf = acm_config.getConf('mqtt')
-        acm_mqtt = ACMmqtt.acmMQTT(acm_mqtt_conf['dest_ip'],acm_mqtt_conf['dest_port'],'',acm_mqtt_conf['topic_will'],acm_mqtt_conf['last_will'],True,acm_mqtt_conf['client'])
+        acm_mqtt = ACMmqtt.acmMQTT(ip=acm_mqtt_conf['dest_ip'],port=acm_mqtt_conf['dest_port'],topic_will=acm_mqtt_conf['topic_will'],last_will=acm_mqtt_conf['last_will'],looped=True,client=acm_mqtt_conf['client'])
         thread_watch = Thread(target = arduino_watch, args=(acm_mqtt,acm_config,))
         thread_alarm = Thread(target = arduino_status, args=(acm_mqtt,acm_config,))
         thread_alarm.start()
@@ -188,8 +187,7 @@ class MyDaemon(Daemon):
         acm_mqtt.close()
  
 if __name__ == "__main__":
-    #main()
-    daemon = MyDaemon('/tmp/acm.pid',stdout="/var/log/acm.log",stderr="/var/log/acm.err")
+    daemon = MyDaemon('/tmp/acm.pid',stdout="log/acm.log",stderr="log/acm.err")
     if len(sys.argv) == 2:
         if 'start' == sys.argv[1]:
             daemon.start()
