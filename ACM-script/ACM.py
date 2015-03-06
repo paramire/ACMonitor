@@ -179,7 +179,7 @@ class MyDaemon(Daemon):
         os.chdir("/home/pramirez/proyects/ACM/ACM/")
         acm_config = ACMconfig.acmConfigParser()
         acm_mqtt_conf = acm_config.getConf('mqtt')
-        acm_mqtt = ACMmqtt.acmMQTT(acm_mqtt_conf['dest_ip'],acm_mqtt_conf['dest_port'],acm_mqtt_conf['topic_will'],acm_mqtt_conf['last_will'],True)
+        acm_mqtt = ACMmqtt.acmMQTT(acm_mqtt_conf['dest_ip'],acm_mqtt_conf['dest_port'],'',acm_mqtt_conf['topic_will'],acm_mqtt_conf['last_will'],True,acm_mqtt_conf['client'])
         thread_watch = Thread(target = arduino_watch, args=(acm_mqtt,acm_config,))
         thread_alarm = Thread(target = arduino_status, args=(acm_mqtt,acm_config,))
         thread_alarm.start()

@@ -52,10 +52,10 @@ def main():
 	acm_config = ACMconfig.acmConfigParser()
 	month_gap = 2592000*int(acm_config.getGeneralConf('month_gap'))
 	acm_sqlite_conf = acm_config.getConf('sqlite')
-	acm_sqlite = ACMsqlite.acmDB(acm_sqlite_conf['dbDir'],acm_sqlite_conf['xbeeCSV'])
+	acm_sqlite = ACMsqlite.acmDB(acm_sqlite_conf['db_dir'],acm_sqlite_conf['xbee_csv'])
 
-	acm_mqtt_conf = acm_config.getConf('mqtt','topicWill','lastWill')
-	acm_mqtt = ACMmqtt.acmMQTT(acm_mqtt_conf['dest_ip'],acm_mqtt_conf['dest_port'])
+	acm_mqtt_conf = acm_config.getConf('mqtt','topicWill','lastWill','mqtt_prefix')
+	acm_mqtt = ACMmqtt.acmMQTT(acm_mqtt_conf['dest_ip'],acm_mqtt_conf['dest_port'],client=acm_mqtt_conf['client'])
 
 	
 	while True:

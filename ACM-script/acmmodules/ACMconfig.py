@@ -10,7 +10,8 @@ class acmConfigParser():
                            'dest_port':1883,
                            'topic_will':'ACM/BBB/status',
                            'last_will':'ERROR: BBB Lost',
-                           'mqtt_prefix':''},
+                           'mqtt_prefix':'',
+                           'client':'ACM_pub'},
                    'general':{'month_gap':3,
                               'sleep_time':150,
                               'gen_dir':'/home/ACM/ACM/ACM-script'}}

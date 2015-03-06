@@ -34,7 +34,7 @@ class acmMQTT(object):
 	           'clean'       :"(%s) BBB - CLEAN - DELETED ROWS: %s"}
 
 
-	def __init__(self,ip,port=1883,prefix='',topic_will='',last_will='',looped=False):
+	def __init__(self,ip,port=1883,prefix='',topic_will='',last_will='',client='ACM_pub',looped=False):
 		"""__init__ 
 
 		MQTT object who manage the MQTT connection, save the IP, PORT,
@@ -55,17 +55,24 @@ class acmMQTT(object):
 		"""
 		self.ip = ip
 		self.port = port
+		self.client = client
+		self.looped = looped
+
 		if prefix != '':
 			self.prefix = prefix + '/'
 		else:
 			self.prefix = prefix
+		
 		self.topic_will = prefix + 'ACM/' + topic_will
 		self.last_will = last_will
-		self.looped = looped
-		self.mqttc = mosquitto.Mosquitto("ACM_pub")
+		
+		self.mqttc = mosquitto.Mosquitto(self.client)
+		
 		if last_will != '':
 			self.mqttc.will_set(self.topic_will,self.last_will)
-		self.mqttc.connect(self.ip,self.port,60,True)
+
+		self.mqttc.connect(self.ip,self.port,60)
+
 		if self.looped:
 			self.mqttc.loop_start()     
 	
