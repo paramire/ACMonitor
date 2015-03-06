@@ -34,7 +34,7 @@ class acmMQTT(object):
 	           'clean'       :"(%s) BBB - CLEAN - DELETED ROWS: %s"}
 
 
-	def __init__(self,ip,port=1883,topic_will='',last_will='',looped=False):
+	def __init__(self,ip,port=1883,prefix='',topic_will='',last_will='',looped=False):
 		"""__init__ 
 
 		MQTT object who manage the MQTT connection, save the IP, PORT,
@@ -46,6 +46,7 @@ class acmMQTT(object):
 		Args:
 			ip (string): IP of the MQTT Broker
 			port (integer): Port number
+			prefix =
 			topic_will (string): Last Will message
 			last_will (string): String with Last Will message
 			looped (boolen): True if looped, False otherwise
@@ -54,7 +55,11 @@ class acmMQTT(object):
 		"""
 		self.ip = ip
 		self.port = port
-		self.topic_will = 'ACM/' + topic_will
+		if prefix != '':
+			self.prefix = prefix + '/'
+		else:
+			self.prefix = prefix
+		self.topic_will = prefix + 'ACM/' + topic_will
 		self.last_will = last_will
 		self.looped = looped
 		self.mqttc = mosquitto.Mosquitto("ACM_pub")
@@ -105,8 +110,9 @@ class acmMQTT(object):
 		Returns:
 			None
 		"""
+		topic = self.prefix + self.topic['init']
 		if len(kwargs) == 1:
-			self.mqttc.publish(self.topic['init'],self._make_message('init',**kwargs))
+			self.mqttc.publish(topic,self._make_message('init',**kwargs))
 		else:
 			raise ValueError("Wrong number of arguments, Expected 1")
 
@@ -120,8 +126,9 @@ class acmMQTT(object):
 		Returns:
 			None
 		"""
+		topic = self.prefix + self.topic['keep']
 		if len(kwargs) == 1:
-			self.mqttc.publish(self.topic['keep'],self._make_message('keep',**kwargs))
+			self.mqttc.publish(topic,self._make_message('keep',**kwargs))
 		else:
 			raise ValueError("Wrong number of arguments, Expected 1")
 
@@ -135,8 +142,9 @@ class acmMQTT(object):
 		Returns:
 			None
 		"""
+		topic = self.prefix + self.topic['alarm']
 		if len(kwargs) == 1:
-			self.mqttc.publish(self.topic['alarm'],self._make_message('alarm',**kwargs))
+			self.mqttc.publish(topic,self._make_message('alarm',**kwargs))
 		else:
 			raise ValueError("Wrong number of arguments, Expected 1")
 	
@@ -150,8 +158,9 @@ class acmMQTT(object):
 		Returns:
 			None
 		"""
+		topic = self.prefix + self.topic['alarm_on']+kwargs['topic']
 		if len(kwargs) == 3:
-			self.mqttc.publish(self.topic['alarm_on']+kwargs['topic'],self._make_message('alarm_on',**kwargs))
+			self.mqttc.publish(topic,self._make_message('alarm_on',**kwargs))
 		else:
 			raise ValueError("Wrong number of arguments, Expected 3")
 	
@@ -165,8 +174,9 @@ class acmMQTT(object):
 		Returns:
 			None
 		"""
+		topic = self.prefix + self.topic['finish']
 		if len(kwargs) == 1:
-			self.mqttc.publish(self.topic['finish'],self._make_message('finish',**kwargs))
+			self.mqttc.publish(topic,self._make_message('finish',**kwargs))
 		else:
 			raise ValueError("Wrong number of arguments, Expected 1")
 	
@@ -183,6 +193,7 @@ class acmMQTT(object):
 		Returns:
 			None
 		"""
+		topic = self.prefix + self.topic['status']
 		if len(kwargs) == 2 or len(kwargs) == 3:
 			if kwargs['connected']:
 				if kwargs['alert'] == 0:
@@ -191,9 +202,9 @@ class acmMQTT(object):
 					kwargs.update({'mode':"ALARM OFF"})
 				else:
 					kwargs.update({'mode':"NOT CONNECTED"})
-				self.mqttc.publish(self.topic['status'],self._make_message('status',**kwargs))
+				self.mqttc.publish(topic,self._make_message('status',**kwargs))
 			else:
-				self.mqttc.publish(self.topic['status'],self._make_message('statusDisc',**kwargs))
+				self.mqttc.publish(topic,self._make_message('statusDisc',**kwargs))
 		else:
 			raise ValueError("Wrong number of arguments, Expected 2 or 3")
 
@@ -207,8 +218,9 @@ class acmMQTT(object):
 		Returns:
 			None
 		"""
+		topic = self.prefix + self.topic['error']
 		if len(kwargs) == 2:
-			self.mqttc.publish(self.topic['error'],self._make_message('error',**kwargs))
+			self.mqttc.publish(topic,self._make_message('error',**kwargs))
 		else:
 			raise ValueError("Wrong number of arguments, Expected 2")
 	
@@ -222,8 +234,9 @@ class acmMQTT(object):
 		Returns:
 			None
 		"""
+		topic = self.prefix + self.topic['clean']
 		if len(kwargs) == 2:
-			self.mqttc.publish(self.topic['clean'],self._make_message('clean',**kwargs))
+			self.mqttc.publish(topic,self._make_message('clean',**kwargs))
 		else:
 			raise ValueError("Wrong number of arguments, Expected 2")
 	

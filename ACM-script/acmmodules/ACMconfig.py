@@ -9,10 +9,11 @@ class acmConfigParser():
                    'mqtt':{'dest_ip':'localhost',
                            'dest_port':1883,
                            'topic_will':'ACM/BBB/status',
-                           'last_will':'ERROR: BBB Lost'},
+                           'last_will':'ERROR: BBB Lost',
+                           'mqtt_prefix':''},
                    'general':{'month_gap':3,
                               'sleep_time':150,
-                              'gen_dir':'/home/ACM/ACM/ACM'}}
+                              'gen_dir':'/home/ACM/ACM/ACM-script'}}
 	def __init__(self):
 		""" __init___ acmConfigParser
 

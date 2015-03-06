@@ -6,7 +6,6 @@ import acmmodules.ACMXbee as ACMXbee
 import acmmodules.ACMmqtt as ACMmqtt
 import acmmodules.ACMsqlite as ACMsqlite
 import acmmodules.ACMconfig as ACMconfig
-import daemon
 
 def arduino_status(acm_mqtt, acm_config):
     """Check the status of the arduino and send the apropiate MQTT msg
@@ -161,19 +160,6 @@ def arduino_watch(acm_mqtt, acm_config):
                 pass
         except KeyboardInterrupt:
             break
-
-
-#def main():
-
-#    acm_config = ACMconfig.acmConfigParser()
-#    acm_mqtt_conf = acm_config.getConf('mqtt')
-#    acm_mqtt = ACMmqtt.acmMQTT(acm_mqtt_conf['dest_ip'],acm_mqtt_conf['dest_port'],acm_mqtt_conf['topic_will'],acm_mqtt_conf['last_will'],True)
-#    thread_watch = Thread(target = arduino_watch, args=(acm_mqtt,acm_config,))
-#    thread_alarm = Thread(target = arduino_status, args=(acm_mqtt,acm_config,))
-#    thread_alarm.start()
-#    thread_watch.start()
-#    thread_alarm.join()
-#    acm_mqtt.close()
 
 
 class MyDaemon(Daemon):

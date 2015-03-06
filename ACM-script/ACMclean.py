@@ -16,8 +16,18 @@ def alarm_trigger(acm_sqlite):
 	if acm_sqlite.is_empty(0xAA) or acm_sqlite.is_empty(0x55):
 		max_id_alarm = acm_sqlite.select(0x55,fields='MAX(id)',fetch_one=True)
 		max_id_finish = acm_sqlite.select(0xAA,fields='MAX(id)',fetch_one=True)
-		alarm = acm_sqlite.select(0x55,fields='date_u',where='id = ' + str(max_id_alarm[0]),fetch_one=True)
-		finish = acm_sqlite.select(0xAA,fields='date_u',where='id = ' + str(max_id_finish[0]),fetch_one=True)
+
+		#Exist ALARM rows, if exist retrieve the last one, if empty, no alarm on
+		if max_id_alarm[0] == 0 :
+			return True
+		else:
+			alarm = acm_sqlite.select(0x55,fields='date_u',where='id = ' + str(max_id_alarm[0]),fetch_one=True)
+
+		#Exist Finish rows, if exist retrieve the last one, if empty, alarm on
+		if max_id_alarm[0] == 0:
+			return False
+		else:
+			finish = acm_sqlite.select(0xAA,fields='date_u',where='id = ' + str(max_id_finish[0]),fetch_one=True)
 
 		if alarm[0] < finish[0]:
 			return True
